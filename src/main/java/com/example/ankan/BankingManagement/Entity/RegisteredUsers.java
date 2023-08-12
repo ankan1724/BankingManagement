@@ -95,4 +95,9 @@ public class RegisteredUsers implements UserDetails {
         this.isEnabled = isEnabled;
         this.roles = roles;
     }
+
+    public RegisteredUsers(String email, Set<Roles> roles) {
+        this.email = email;
+        this.roles = roles;
+    }
 }
