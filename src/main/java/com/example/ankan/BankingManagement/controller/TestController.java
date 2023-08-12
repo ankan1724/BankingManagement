@@ -42,14 +42,14 @@ public class TestController {
         return ResponseEntity.ok().body("not accessible");
     }
 
-//    @GetMapping("/test2")
-//    public ResponseEntity<String> test2() {
-//        auth();
-//        if (userAuthorities.contains("admin")) {
-//            return ResponseEntity.ok().body("accessible by admins");
-//        }
-//        return ResponseEntity.ok().body("Test successful. Role based Authorization is working\n. " + "Since this is only accessible by admins" + "users cannot access this");
-//    }
+    @GetMapping("/test2")
+    public ResponseEntity<String> test2() {
+        auth();
+        if (userAuthorities.contains("admin")) {
+            return ResponseEntity.ok().body("accessible by admins");
+        }
+        return ResponseEntity.ok().body("Test successful. Role based Authorization is working\n. " + "Since this is only accessible by admins" + "users cannot access this");
+    }
 
     @PostMapping("/send/mail")
     public ResponseEntity<String> sendMail(@RequestParam String email) throws MessagingException {

@@ -36,14 +36,28 @@ public class RegisterUserController {
     }
 
     @PutMapping("/assign/newRole")
-    public void addNewRoleToExistingUsers(@RequestParam String email,@RequestParam String new_role) {
+    public ResponseEntity<String> addNewRoleToExistingUsers(@RequestParam String email,@RequestParam String new_role) {
+        RegisteredUsers users = dao.findByEmail(email);
+        Set<Roles> newRoleSet = roleDao.findByRole(new_role);
+        if (!newRoleSet.isEmpty()) {
+            Set<Roles> existingRoleSet = users.getRoles();
+            existingRoleSet.addAll(newRoleSet);
+            users.setRoles(newRoleSet);
+            dao.save(users);
+            return ResponseEntity.ok().body("new role " + new_role + " has been added to the user " + email);
+        }
+        else return ResponseEntity.ok().body("no such role exist");
+    }
+    @PutMapping("/modify/role")
+    public ResponseEntity<String> modifyRoleForExistingUsers(@RequestParam String email,@RequestParam String new_role) {
         RegisteredUsers users=dao.findByEmail(email);
-        Set<Roles> rolesSet= roleDao.findByRole(new_role);
-        Set<Roles> newRoleSet=users.getRoles();
-        newRoleSet.addAll(rolesSet);
-        users.setRoles(newRoleSet);
-        dao.save(users);
-        log.info(users.getRoles().toString());
+        Set<Roles> newRole= roleDao.findByRole(new_role);
+        if(!newRole.isEmpty()){
+            users.setRoles(newRole);
+            dao.save(users);
+            return ResponseEntity.ok().body("role modified for user "+email);
+        }
+        else return ResponseEntity.ok().body("no such role exist");
     }
 }
 
