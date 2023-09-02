@@ -1,7 +1,12 @@
 package com.example.ankan.BankingManagement.controller;
 
+import com.example.ankan.BankingManagement.jobs.JobData;
+import com.example.ankan.BankingManagement.jobs.ScheduledJob;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.quartz.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.mail.MailProperties;
 import org.springframework.http.ResponseEntity;
@@ -10,21 +15,25 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
+import java.security.SignatureException;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.List;
 
 @RestController
+@Tag(name = "Test Controller")
 public class TestController {
 
     List<String> userAuthorities;
     @Autowired
+    Scheduler scheduler;
+    @Autowired
     private JavaMailSender javaMailSender;
-
     @Autowired
     private MailProperties mailProperties;
 
@@ -34,15 +43,19 @@ public class TestController {
     }
 
     @GetMapping("/test1")
-    public ResponseEntity<String> test() {
-        auth();
-        if (userAuthorities.contains("user") || userAuthorities.contains("admin")) {
-            return ResponseEntity.ok().body("accessible by all users");
+    @Operation(summary = "This endpoint is for testing purpose. It's accessible by all")
+    public ResponseEntity<String> test() throws Exception {
+
+            auth();
+            if ((userAuthorities.contains("user") || userAuthorities.contains("admin"))) {
+                return ResponseEntity.ok().body("accessible by all users");
+            }
+            else return ResponseEntity.badRequest().body("Access Denied");
         }
-        return ResponseEntity.ok().body("not accessible");
-    }
+
 
     @GetMapping("/test2")
+    @Operation(summary = "This endpoint is for testing purpose. Its accessible by only admins")
     public ResponseEntity<String> test2() {
         auth();
         if (userAuthorities.contains("admin")) {
@@ -52,9 +65,10 @@ public class TestController {
     }
 
     @PostMapping("/send/mail")
+    @Operation(summary = "This endpoint is for sending email. Its accessible by admins and Email_access role holders ")
     public ResponseEntity<String> sendMail(@RequestParam String email) throws MessagingException {
         auth();
-        if (userAuthorities.contains("email_access")||userAuthorities.contains("admin")) {
+        if (userAuthorities.contains("email_access") || userAuthorities.contains("admin")) {
             sendMail(mailProperties.getUsername(), email);
             return ResponseEntity.ok().body("mail sent");
         }
@@ -72,5 +86,27 @@ public class TestController {
         javaMailSender.send(message);
     }
 
+    @PostMapping("/schedule")
+    public ResponseEntity<String> schedule(@RequestBody JobData data) throws SchedulerException {
+        scheduled(data);
+        return ResponseEntity.ok().body("Success");
+    }
 
+
+    public void scheduled(JobData data) throws SchedulerException {
+
+        String jobName = data.getJobName();
+        String jobGroup = data.getJobGroup();
+        int counter = data.getCounter();
+        int gapDuration = data.getGapDuration();
+        ZonedDateTime zonedDateTime = ZonedDateTime.of(data.getStartTime(), ZoneId.of("Asia/Kolkata"));
+
+        JobDataMap dataMap = new JobDataMap();
+        dataMap.put("Task", "this is for fetching no. of registered users");
+        JobDetail details = JobBuilder.newJob(ScheduledJob.class).withIdentity(jobName, jobGroup).usingJobData(dataMap).build();
+
+        Trigger trigger = TriggerBuilder.newTrigger().withIdentity(jobName, jobGroup).startAt(Date.from(zonedDateTime.toInstant())).withSchedule(SimpleScheduleBuilder.simpleSchedule().withIntervalInMinutes(gapDuration).withRepeatCount(counter)).build();
+
+        scheduler.scheduleJob(details, trigger);
+    }
 }

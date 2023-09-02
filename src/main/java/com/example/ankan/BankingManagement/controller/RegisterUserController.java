@@ -5,6 +5,8 @@ import com.example.ankan.BankingManagement.Dao.UserDao;
 import com.example.ankan.BankingManagement.Entity.RegisteredUsers;
 import com.example.ankan.BankingManagement.Entity.Roles;
 import com.example.ankan.BankingManagement.service.RegisterUserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,49 +17,26 @@ import java.util.Set;
 
 @RestController
 @Slf4j
+@Tag(name = "User Controller")
 public class RegisterUserController {
 
     @Autowired
     private UserDao dao;
-    @Autowired
-    private RoleDao roleDao;
 
     @Autowired
     private RegisterUserService registerUserService;
 
     @PostMapping("/register/user")
+    @Operation(summary = "This endpoint is for registering new user account")
     public ResponseEntity<String> registerUser(String name, String email, String password){
         return this.registerUserService.registerDefaultUser(name, email, password);
     }
 
     @PostMapping("/register/admin")
+    @Operation(summary = "This endpoint is for registering new admin account")
     public ResponseEntity<String> registerAdmin(String name, String email, String password){
         return this.registerUserService.registerDefaultAdmin(name, email, password);
     }
 
-    @PutMapping("/assign/newRole")
-    public ResponseEntity<String> addNewRoleToExistingUsers(@RequestParam String email,@RequestParam String new_role) {
-        RegisteredUsers users = dao.findByEmail(email);
-        Set<Roles> newRoleSet = roleDao.findByRole(new_role);
-        if (!newRoleSet.isEmpty()) {
-            Set<Roles> existingRoleSet = users.getRoles();
-            existingRoleSet.addAll(newRoleSet);
-            users.setRoles(newRoleSet);
-            dao.save(users);
-            return ResponseEntity.ok().body("new role " + new_role + " has been added to the user " + email);
-        }
-        else return ResponseEntity.ok().body("no such role exist");
-    }
-    @PutMapping("/modify/role")
-    public ResponseEntity<String> modifyRoleForExistingUsers(@RequestParam String email,@RequestParam String new_role) {
-        RegisteredUsers users=dao.findByEmail(email);
-        Set<Roles> newRole= roleDao.findByRole(new_role);
-        if(!newRole.isEmpty()){
-            users.setRoles(newRole);
-            dao.save(users);
-            return ResponseEntity.ok().body("role modified for user "+email);
-        }
-        else return ResponseEntity.ok().body("no such role exist");
-    }
 }
 
